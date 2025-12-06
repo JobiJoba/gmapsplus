@@ -18,9 +18,11 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <header className="border-b border-gray-800 bg-black">
+      <header className=" bg-black">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-white">GMapsPlus</h1>
+          <Link to="/">
+            <h1 className="text-2xl font-bold text-white">GMapsPlus</h1>
+          </Link>
           <Link to="/auth">
             <Button className="bg-white text-black hover:bg-gray-200">
               Sign In
@@ -39,6 +41,7 @@ export default function Landing() {
           before. Create lists, share with friends, and let the wheel decide
           your next adventure.
         </p>
+
         <Link to="/auth">
           <Button
             size="lg"
@@ -49,52 +52,32 @@ export default function Landing() {
         </Link>
       </section>
 
-      {/* Features */}
+      {/* Filters Section */}
       <section className="container mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader>
-              <MapPin className="h-10 w-10 mb-2 text-blue-400" />
-              <CardTitle className="text-white">Save Places</CardTitle>
-              <CardDescription className="text-gray-300">
-                Save your favorite restaurants, cafes, parks, and more from
-                Google Maps
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader>
-              <List className="h-10 w-10 mb-2 text-blue-400" />
-              <CardTitle className="text-white">Create Lists</CardTitle>
-              <CardDescription className="text-gray-300">
-                Save your favorite restaurants, cafes, parks, and more from
-                Google Maps
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader>
-              <Share2 className="h-10 w-10 mb-2 text-blue-400" />
-              <CardTitle className="text-white">Share Lists</CardTitle>
-              <CardDescription className="text-gray-300">
-                Share your curated lists with friends and discover new places
-                together
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader>
-              <Shuffle className="h-10 w-10 mb-2 text-blue-400" />
-              <CardTitle className="text-white">Wheel of Places</CardTitle>
-              <CardDescription className="text-gray-300">
-                Can't decide? Spin the wheel and let fate choose your next
-                destination
-              </CardDescription>
-            </CardHeader>
-          </Card>
+        <h2 className="text-4xl font-bold mb-12 text-center text-white">
+          Google Maps have like 5 filters
+        </h2>
+        <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+          <div className="flex flex-col">
+            <h3 className="text-2xl font-semibold mb-4 text-white text-center">
+              In Google Maps
+            </h3>
+            <img
+              src="/ingmaps1.jpg"
+              alt="Google Maps filters"
+              className="w-full rounded-lg shadow-lg"
+            />
+          </div>
+          <div className="flex flex-col">
+            <h3 className="text-2xl font-semibold mb-4 text-white text-center">
+              We have all of them
+            </h3>
+            <img
+              src="/ingmaps2.jpg"
+              alt="GMapsPlus filters"
+              className="w-full rounded-lg shadow-lg"
+            />
+          </div>
         </div>
       </section>
 

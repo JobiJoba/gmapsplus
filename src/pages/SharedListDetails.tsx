@@ -123,7 +123,9 @@ export default function SharedListDetails() {
       {/* Header */}
       <header className="border-b border-gray-800 bg-black">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-white">GMapsPlus</h1>
+          <Link to="/">
+            <h1 className="text-2xl font-bold text-white">GMapsPlus</h1>
+          </Link>
           <Link to="/auth">
             <Button className="bg-white text-black hover:bg-gray-200">
               Sign In
