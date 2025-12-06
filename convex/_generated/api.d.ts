@@ -9,8 +9,11 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as googlePlaces from "../googlePlaces.js";
 import type * as http from "../http.js";
+import type * as lists from "../lists.js";
 import type * as myFunctions from "../myFunctions.js";
+import type * as places from "../places.js";
 
 import type {
   ApiFromModules,
@@ -20,8 +23,11 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  googlePlaces: typeof googlePlaces;
   http: typeof http;
+  lists: typeof lists;
   myFunctions: typeof myFunctions;
+  places: typeof places;
 }>;
 
 /**
