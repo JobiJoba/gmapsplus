@@ -17,14 +17,6 @@
   - Documentation: https://visgl.github.io/react-google-maps/
   - Install: `npm install @vis.gl/react-google-maps`
 
-## Data Display
-
-- **TanStack Table** - Table and data grid library
-  - Documentation: https://tanstack.com/table/latest
-  - Requirements:
-    - Table view
-    - Card view
-    - Faceted search (for both views)
 
 ## Notes
 
