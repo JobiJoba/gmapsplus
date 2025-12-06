@@ -6,24 +6,23 @@ Google maps is fantastic and GMapsPlus is here to extend this fantastic tool!
 
 Adding your favorite place from Google Maps into GMapsPlus will let you filter your data even more! You want a burger restaurant with parking? EASY in GMapsPlus ... impossible in Google Maps.
 
-![Google Maps filters screenshot](ingmaps1.jpg)
+![Google Maps filters screenshot](./public/ingmaps1.jpg)
 
 In GMapsPlus
 
-![GMapsPlus filters screenshot](ingmaps2.jpg)
+![GMapsPlus filters screenshot](./public/ingmaps2.jpg)
 
 ### Solve the biggest problem in Chiang Mai
 
 You don't know what to eat tonight? Add your favorite restaurant to the spin and randomly get a suggestion!
 
-![cmPro](cmProblem.jpg)
-
+![cmPro](./public/cmProblem.jpg)
 
 ### Social aspect! Create list and share them
 
-Create public list of your favorite burger restaurant or best bubble tea in town. 
+Create public list of your favorite burger restaurant or best bubble tea in town.
 
-
+![cmPro](./public/sharedList.jpg)
 
 ## TECHNICAL
 
