@@ -4,14 +4,21 @@ import { api } from "../../convex/_generated/api";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Star, MapPin, Phone, Globe, Clock } from "lucide-react";
+import { Star, MapPin, Phone, Globe, Clock, Save, ExternalLink } from "lucide-react";
+
+const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+
+// Helper function to construct photo URL from Google Places API (New) photo name
+function getPhotoUrl(photoName: string): string {
+  if (!photoName || !API_KEY) return "";
+  return `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=400&maxWidthPx=400&key=${API_KEY}`;
+}
 
 interface PlaceDetailsDialogProps {
   placeId: string | null;
@@ -42,32 +49,47 @@ export function PlaceDetailsDialog({
     (p) => p.data?.id === placeId || p.googlePlaceId === placeId
   );
 
-  // If place is saved, use its data; otherwise we'll need to fetch it
+  // Fetch place details when dialog opens
   useEffect(() => {
+    if (!placeId || !open) {
+      setPlaceData(null);
+      return;
+    }
+
     if (savedPlace) {
       setPlaceData(savedPlace.data);
-    } else if (placeId && open) {
-      // For unsaved places, we'd need to fetch details
-      // For now, we'll show basic info from the placeId
-      setPlaceData(null);
+      setLoading(false);
+    } else {
+      // Fetch place details from Google Places API
+      setLoading(true);
+      fetchPlaceDetails({ placeId })
+        .then((data) => {
+          setPlaceData(data);
+        })
+        .catch((error) => {
+          console.error("Error fetching place details:", error);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
-  }, [savedPlace, placeId, open]);
+  }, [placeId, open, savedPlace, fetchPlaceDetails]);
 
   const handleSave = async () => {
     if (!placeId) return;
     setSaving(true);
     try {
-      // First, check if place exists in database
-      // If not, fetch place data from Google Places API
       let placeDataToSave: any = null;
       
-      // Check if we already have the place data
       if (!savedPlace) {
-        // Fetch place details from Google Places API
-        placeDataToSave = await fetchPlaceDetails({ placeId });
+        // Use already fetched data if available, otherwise fetch it
+        if (!placeData) {
+          placeDataToSave = await fetchPlaceDetails({ placeId });
+        } else {
+          placeDataToSave = placeData;
+        }
       }
       
-      // Save the place (mutation will use existing place if it exists, or save new one with data)
       await savePlace({ 
         googlePlaceId: placeId,
         placeData: placeDataToSave || undefined,
@@ -114,154 +136,144 @@ export function PlaceDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogHeader className="px-6 pt-6 pb-4">
+          <DialogTitle className="text-xl font-semibold">
             {displayData.displayName?.text || placeId || "Place Details"}
           </DialogTitle>
-          <DialogDescription>
-            {displayData.formattedAddress || "Loading place details..."}
-          </DialogDescription>
         </DialogHeader>
 
         {loading ? (
-          <div className="py-8 text-center">Loading place details...</div>
+          <div className="py-8 text-center px-6">Loading place details...</div>
         ) : (
-          <div className="space-y-4 mt-4">
-            {/* Rating */}
-            {displayData.rating && (
-              <div className="flex items-center gap-2">
-                <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                <span className="font-semibold">{displayData.rating}</span>
-                {displayData.userRatingCount && (
-                  <span className="text-sm text-muted-foreground">
-                    ({displayData.userRatingCount} reviews)
-                  </span>
-                )}
+          <div className="px-6 pb-6 space-y-4">
+            {/* Save Button - Prominent at top */}
+            {!savedPlace && (
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 text-base font-medium"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? "Saving..." : "Save to my places"}
+              </Button>
+            )}
+
+            {/* Photo */}
+            {displayData.photos && displayData.photos.length > 0 && displayData.photos[0].name && (
+              <div className="w-full h-64 rounded-lg overflow-hidden">
+                <img
+                  src={getPhotoUrl(displayData.photos[0].name)}
+                  alt={displayData.displayName?.text || "Place photo"}
+                  className="w-full h-full object-cover"
+                />
               </div>
             )}
 
-            {/* Price Level */}
-            {displayData.priceLevel && (
-              <div>
-                <Badge variant="secondary">
-                  {"$".repeat(displayData.priceLevel)}
+            {/* Rating and Category */}
+            <div className="flex items-center gap-3">
+              {displayData.rating && (
+                <div className="flex items-center gap-1">
+                  <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                  <span className="font-semibold text-base">{displayData.rating}</span>
+                  {displayData.userRatingCount && (
+                    <span className="text-sm text-gray-600">
+                      ({displayData.userRatingCount.toLocaleString()} reviews)
+                    </span>
+                  )}
+                </div>
+              )}
+              {displayData.types && displayData.types.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {displayData.types[0].replace(/_/g, " ")}
                 </Badge>
-              </div>
-            )}
-
-            {/* Types */}
-            {displayData.types && displayData.types.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {displayData.types.slice(0, 5).map((type: string) => (
-                  <Badge key={type} variant="outline">
-                    {type.replace(/_/g, " ")}
-                  </Badge>
-                ))}
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Address */}
             {displayData.formattedAddress && (
-              <div className="flex items-start gap-2">
-                <MapPin className="h-5 w-5 mt-0.5 text-muted-foreground" />
-                <span>{displayData.formattedAddress}</span>
+              <div className="flex items-start gap-2 text-sm">
+                <MapPin className="h-4 w-4 mt-0.5 text-gray-500 flex-shrink-0" />
+                <span className="text-gray-700">{displayData.formattedAddress}</span>
               </div>
             )}
 
             {/* Phone */}
             {displayData.nationalPhoneNumber && (
-              <div className="flex items-center gap-2">
-                <Phone className="h-5 w-5 text-muted-foreground" />
-                <span>{displayData.nationalPhoneNumber}</span>
-              </div>
-            )}
-
-            {/* Website */}
-            {displayData.websiteUri && (
-              <div className="flex items-center gap-2">
-                <Globe className="h-5 w-5 text-muted-foreground" />
-                <a
-                  href={displayData.websiteUri}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
-                >
-                  Visit Website
-                </a>
+              <div className="flex items-center gap-2 text-sm">
+                <Phone className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                <span className="text-gray-700">{displayData.nationalPhoneNumber}</span>
               </div>
             )}
 
             {/* Opening Hours */}
             {displayData.currentOpeningHours && (
-              <div className="flex items-start gap-2">
-                <Clock className="h-5 w-5 mt-0.5 text-muted-foreground" />
-                <div>
-                  <p className="font-semibold mb-1">Opening Hours</p>
-                  {displayData.currentOpeningHours.weekdayDescriptions?.map(
-                    (desc: string, i: number) => (
-                      <p key={i} className="text-sm">
-                        {desc}
-                      </p>
-                    )
-                  )}
-                </div>
+              <div className="space-y-1">
+                <p className="font-semibold text-sm mb-2">Opening Hours</p>
+                {displayData.currentOpeningHours.weekdayDescriptions?.map(
+                  (desc: string, i: number) => (
+                    <p key={i} className="text-sm text-gray-700">
+                      {desc}
+                    </p>
+                  )
+                )}
               </div>
             )}
 
-            {/* Photos */}
-            {displayData.photos && displayData.photos.length > 0 && (
-              <div>
-                <p className="font-semibold mb-2">Photos</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {displayData.photos.slice(0, 4).map((photo: any, i: number) => (
-                    <img
-                      key={i}
-                      src={photo.uri || photo.name}
-                      alt={`Photo ${i + 1}`}
-                      className="w-full h-32 object-cover rounded-md"
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex flex-col gap-3 pt-4 border-t">
-              {savedPlace ? (
-                <>
-                  <Button variant="destructive" onClick={handleRemove} disabled={saving}>
-                    Remove from Saved Places
-                  </Button>
-                  {userLists && userLists.length > 0 && (
-                    <div className="flex gap-2">
-                      <Select value={selectedListId} onValueChange={setSelectedListId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Add to list..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {userLists.map((list) => (
-                            <SelectItem key={list._id} value={list._id}>
-                              {list.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        onClick={handleAddToList}
-                        disabled={!selectedListId}
-                      >
-                        Add
-                      </Button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <Button onClick={handleSave} disabled={saving}>
-                  {saving ? "Saving..." : "Save to App"}
-                </Button>
+            {/* Links */}
+            <div className="flex flex-col gap-2 pt-2">
+              {displayData.websiteUri && (
+                <a
+                  href={displayData.websiteUri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+                >
+                  Visit Website <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+              {displayData.googleMapsUri && (
+                <a
+                  href={displayData.googleMapsUri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+                >
+                  View on Google Maps <ExternalLink className="h-3 w-3" />
+                </a>
               )}
             </div>
+
+            {/* Actions for saved places */}
+            {savedPlace && (
+              <div className="flex flex-col gap-3 pt-4 border-t">
+                <Button variant="destructive" onClick={handleRemove} disabled={saving}>
+                  Remove from Saved Places
+                </Button>
+                {userLists && userLists.length > 0 && (
+                  <div className="flex gap-2">
+                    <Select value={selectedListId} onValueChange={setSelectedListId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Add to list..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {userLists.map((list) => (
+                          <SelectItem key={list._id} value={list._id}>
+                            {list.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      onClick={handleAddToList}
+                      disabled={!selectedListId}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </DialogContent>

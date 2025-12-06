@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { APIProvider, Map, Marker, useMap } from "@vis.gl/react-google-maps";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { PlaceDetailsPanel } from "./PlaceDetailsPanel";
+import { PlaceDetailsDialog } from "./PlaceDetailsDialog";
 import { PlaceSearch } from "./PlaceSearch";
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
@@ -33,6 +33,46 @@ function MapContent({ onPlaceSelect }: MapContentProps) {
       }
     }
   }, [map, userPlaces]);
+
+  // Handle clicks on default Google Maps markers
+  useEffect(() => {
+    if (!map) return;
+
+    const handleMapClick = (event: google.maps.MapMouseEvent) => {
+      if (!event.latLng) return;
+
+      // Use PlacesService to find nearby places at the clicked location
+      // This will detect clicks on Google Maps default markers
+      const placesService = new google.maps.places.PlacesService(map);
+      const request = {
+        location: event.latLng,
+        radius: 50, // Search within 50 meters
+        type: "establishment",
+      };
+
+      placesService.nearbySearch(request, (results, status) => {
+        if (
+          status === google.maps.places.PlacesServiceStatus.OK &&
+          results &&
+          results.length > 0
+        ) {
+          // Get the closest place
+          const place = results[0];
+          if (place.place_id) {
+            onPlaceSelect(place.place_id);
+          }
+        }
+      });
+    };
+
+    const listener = map.addListener("click", handleMapClick);
+
+    return () => {
+      if (listener) {
+        google.maps.event.removeListener(listener);
+      }
+    };
+  }, [map, onPlaceSelect]);
 
   if (!userPlaces) {
     return (
@@ -70,18 +110,20 @@ function MapContent({ onPlaceSelect }: MapContentProps) {
 
 export default function MapComponent() {
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const handlePlaceSelect = (placeId: string) => {
     setSelectedPlaceId(placeId);
-    setPanelOpen(true);
+    setDialogOpen(true);
   };
 
   if (!API_KEY) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-100">
         <div className="text-center p-8">
-          <p className="text-lg font-semibold mb-2">Google Maps API Key Required</p>
+          <p className="text-lg font-semibold mb-2">
+            Google Maps API Key Required
+          </p>
           <p className="text-sm text-gray-600">
             Please set VITE_GOOGLE_MAPS_API_KEY in your environment variables
           </p>
@@ -103,12 +145,14 @@ export default function MapComponent() {
         >
           <MapContent onPlaceSelect={handlePlaceSelect} />
         </Map>
-        <PlaceDetailsPanel
+        <PlaceDetailsDialog
           placeId={selectedPlaceId}
-          open={panelOpen}
-          onClose={() => {
-            setPanelOpen(false);
-            setSelectedPlaceId(null);
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              setSelectedPlaceId(null);
+            }
           }}
           onPlaceSaved={() => {
             // Refetch places
@@ -118,4 +162,3 @@ export default function MapComponent() {
     </APIProvider>
   );
 }
-
