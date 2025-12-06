@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlaceDetailsDialog } from "@/components/PlaceDetailsDialog";
+import { formatFilterLabel } from "@/lib/filterLabels";
 
 type FacetSelections = Record<string, (string | number)[]>;
 
@@ -56,29 +57,6 @@ export default function ListDetails() {
   const addPlaceToList = useMutation(api.lists.addPlaceToList);
 
   const isOwner = list && userId && list.userId === userId;
-
-  const formatFacetLabel = (key: string, value: string | number): string => {
-    switch (key) {
-      case "priceLevel":
-        return "$".repeat(value as number);
-      case "rating":
-        return `${value}+ stars`;
-      case "types":
-        return String(value).replace(/_/g, " ");
-      case "businessStatus":
-        return String(value).replace(/_/g, " ");
-      case "accessibilityOptions":
-        return String(value).replace(/_/g, " ");
-      case "openingDays":
-        return String(value);
-      case "paymentOptions":
-        return String(value).replace(/_/g, " ");
-      case "parkingOptions":
-        return String(value).replace(/_/g, " ");
-      default:
-        return String(value).replace(/_/g, " ");
-    }
-  };
 
   const formatFacetTitle = (key: string): string => {
     const titles: Record<string, string> = {
@@ -123,7 +101,7 @@ export default function ListDetails() {
     const filters: Array<{ key: string; label: string }> = [];
     for (const [key, values] of Object.entries(selectedFacets)) {
       for (const value of values) {
-        filters.push({ key, label: formatFacetLabel(key, value) });
+        filters.push({ key, label: formatFilterLabel(key, value) });
       }
     }
     return filters;
@@ -283,9 +261,9 @@ export default function ListDetails() {
                             <label
                               htmlFor={id}
                               className="text-sm font-medium cursor-pointer text-foreground group-hover:text-primary transition-colors flex-1 truncate"
-                              title={formatFacetLabel(facetKey, value)}
+                              title={formatFilterLabel(facetKey, value)}
                             >
-                              {formatFacetLabel(facetKey, value)}
+                              {formatFilterLabel(facetKey, value)}
                             </label>
                           </div>
                         );
