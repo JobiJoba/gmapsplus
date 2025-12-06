@@ -67,6 +67,25 @@ export default function WheelPage() {
     setSelectedTypes(newSet);
   };
 
+  const toggleSelectAll = () => {
+    const allSelected = filteredPlaces.every((place) =>
+      selectedPlaceIds.has(place._id)
+    );
+    const newSet = new Set(selectedPlaceIds);
+    if (allSelected) {
+      // Deselect all filtered places
+      filteredPlaces.forEach((place) => {
+        newSet.delete(place._id);
+      });
+    } else {
+      // Select all filtered places
+      filteredPlaces.forEach((place) => {
+        newSet.add(place._id);
+      });
+    }
+    setSelectedPlaceIds(newSet);
+  };
+
   const handleSpin = () => {
     if (selectedPlaces.length === 0) {
       alert("Please select at least one place!");
@@ -138,6 +157,27 @@ export default function WheelPage() {
                         Clear filters
                       </Button>
                     )}
+                  </div>
+                )}
+                {filteredPlaces.length > 0 && (
+                  <div className="mb-3 pb-3 border-b">
+                    <div
+                      className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
+                      onClick={toggleSelectAll}
+                    >
+                      <Checkbox
+                        checked={
+                          filteredPlaces.length > 0 &&
+                          filteredPlaces.every((place) =>
+                            selectedPlaceIds.has(place._id)
+                          )
+                        }
+                        onCheckedChange={toggleSelectAll}
+                      />
+                      <span className="font-semibold text-sm">
+                        Select All ({filteredPlaces.length})
+                      </span>
+                    </div>
                   </div>
                 )}
                 <div className="space-y-2 max-h-[600px] overflow-y-auto">

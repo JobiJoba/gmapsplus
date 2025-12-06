@@ -58,7 +58,7 @@ export default function Shared() {
                     {list.placeCount}{" "}
                     {list.placeCount === 1 ? "place" : "places"}
                   </p>
-                  <Link to={`/app/lists/${list._id}`}>
+                  <Link to={`/shared/${list._id}`}>
                     <Button variant="outline" className="w-full">
                       View List
                     </Button>

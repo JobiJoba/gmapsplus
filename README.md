@@ -25,3 +25,5 @@ The second prompt was more a big prompt with the general idea, and some mockup e
 After that it was fine tuning and bug debugging in agent mode.
 
 Once I had a stable solution, I start to add more features.
+
+

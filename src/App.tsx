@@ -9,6 +9,7 @@ import Lists from "./pages/Lists";
 import ListDetails from "./pages/ListDetails";
 import Wheel from "./pages/Wheel";
 import Shared from "./pages/Shared";
+import SharedListDetails from "./pages/SharedListDetails";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return (
@@ -120,6 +121,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/shared/:listId" element={<SharedListDetails />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

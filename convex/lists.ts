@@ -340,6 +340,94 @@ export const getSharedLists = query({
 });
 
 /**
+ * Get limited public lists (for landing page)
+ */
+export const getLimitedSharedLists = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 10;
+    
+    // Get all public lists
+    const allLists = await ctx.db
+      .query("lists")
+      .filter((q) => q.eq(q.field("isPublic"), true))
+      .collect();
+
+    // Sort by updatedAt descending and take limit
+    const sortedLists = allLists
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, limit);
+
+    // Get place counts and user info for each list
+    const listsWithCounts = await Promise.all(
+      sortedLists.map(async (list) => {
+        const listPlaces = await ctx.db
+          .query("listPlaces")
+          .withIndex("by_listId", (q) => q.eq("listId", list._id))
+          .collect();
+
+        // Get user info
+        const user = await ctx.db.get(list.userId);
+        const ownerName = (user as any)?.name || (user as any)?.email || "Unknown";
+
+        return {
+          ...list,
+          placeCount: listPlaces.length,
+          ownerName,
+        };
+      })
+    );
+
+    return listsWithCounts;
+  },
+});
+
+/**
+ * Get public list by ID (no authentication required)
+ */
+export const getPublicListById = query({
+  args: {
+    listId: v.id("lists"),
+  },
+  handler: async (ctx, args) => {
+    const list = await ctx.db.get(args.listId);
+    if (!list) {
+      return null;
+    }
+
+    // Only allow access to public lists
+    if (!list.isPublic) {
+      return null;
+    }
+
+    // Get places in the list
+    const listPlaces = await ctx.db
+      .query("listPlaces")
+      .withIndex("by_listId", (q) => q.eq("listId", args.listId))
+      .collect();
+
+    const places = await Promise.all(
+      listPlaces.map(async (listPlace) => {
+        const place = await ctx.db.get(listPlace.placeId);
+        return place ? { ...place, addedAt: listPlace.addedAt } : null;
+      })
+    );
+
+    // Get user info
+    const user = await ctx.db.get(list.userId);
+    const ownerName = (user as any)?.name || (user as any)?.email || "Unknown";
+
+    return {
+      ...list,
+      places: places.filter((p) => p !== null),
+      ownerName,
+    };
+  },
+});
+
+/**
  * Get list by share token (for public access)
  */
 export const getListByToken = query({
