@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -13,6 +13,7 @@ import { api } from "../../convex/_generated/api";
 
 export default function Nav() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { signOut } = useAuthActions();
   const user = useQuery(api.myFunctions.listNumbers, { count: 0 });
 
@@ -69,7 +70,10 @@ export default function Nav() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem
-                  onClick={() => void signOut()}
+                  onClick={() => {
+                    void signOut();
+                    navigate("/");
+                  }}
                   className="cursor-pointer"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
