@@ -12,15 +12,40 @@ export default function WheelPage() {
   const [selectedPlaceIds, setSelectedPlaceIds] = useState<Set<string>>(new Set());
   const [selectedPlace, setSelectedPlace] = useState<any>(null);
   const [isSpinning, setIsSpinning] = useState(false);
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   
   const userPlaces = useQuery(api.places.getUserPlaces);
 
-  const selectedPlaces = useMemo(() => {
+  // Extract available types from user places
+  const availableTypes = useMemo(() => {
     if (!userPlaces) return [];
-    return userPlaces.filter((place) =>
+    const typesSet = new Set<string>();
+    userPlaces.forEach((place) => {
+      if (place.data?.types && Array.isArray(place.data.types)) {
+        place.data.types.forEach((type: string) => {
+          typesSet.add(type);
+        });
+      }
+    });
+    return Array.from(typesSet).sort();
+  }, [userPlaces]);
+
+  // Filter places by selected types
+  const filteredPlaces = useMemo(() => {
+    if (!userPlaces) return [];
+    if (selectedTypes.size === 0) return userPlaces;
+    return userPlaces.filter((place) => {
+      if (!place.data?.types || !Array.isArray(place.data.types)) return false;
+      return place.data.types.some((type: string) => selectedTypes.has(type));
+    });
+  }, [userPlaces, selectedTypes]);
+
+  const selectedPlaces = useMemo(() => {
+    if (!filteredPlaces) return [];
+    return filteredPlaces.filter((place) =>
       selectedPlaceIds.has(place._id)
     );
-  }, [userPlaces, selectedPlaceIds]);
+  }, [filteredPlaces, selectedPlaceIds]);
 
   const togglePlace = (placeId: string) => {
     const newSet = new Set(selectedPlaceIds);
@@ -30,6 +55,16 @@ export default function WheelPage() {
       newSet.add(placeId);
     }
     setSelectedPlaceIds(newSet);
+  };
+
+  const toggleType = (type: string) => {
+    const newSet = new Set(selectedTypes);
+    if (newSet.has(type)) {
+      newSet.delete(type);
+    } else {
+      newSet.add(type);
+    }
+    setSelectedTypes(newSet);
   };
 
   const handleSpin = () => {
@@ -73,8 +108,47 @@ export default function WheelPage() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                {userPlaces.map((place) => {
+              <>
+                {/* Types Filter */}
+                {availableTypes.length > 0 && (
+                  <div className="mb-4 pb-4 border-b">
+                    <h3 className="text-sm font-semibold mb-2">Filter by Type</h3>
+                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                      {availableTypes.map((type) => {
+                        const isSelected = selectedTypes.has(type);
+                        return (
+                          <Badge
+                            key={type}
+                            variant={isSelected ? "default" : "outline"}
+                            className="cursor-pointer"
+                            onClick={() => toggleType(type)}
+                          >
+                            {type.replace(/_/g, " ")}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                    {selectedTypes.size > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 h-7 text-xs"
+                        onClick={() => setSelectedTypes(new Set())}
+                      >
+                        Clear filters
+                      </Button>
+                    )}
+                  </div>
+                )}
+                <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                  {filteredPlaces.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">
+                        No places match the selected filters
+                      </p>
+                    </div>
+                  ) : (
+                    filteredPlaces.map((place) => {
                   const isSelected = selectedPlaceIds.has(place._id);
                   return (
                     <div
@@ -101,9 +175,11 @@ export default function WheelPage() {
                         )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                    );
+                  })
+                  )}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

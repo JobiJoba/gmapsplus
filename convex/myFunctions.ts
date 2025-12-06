@@ -31,6 +31,14 @@ export const listNumbers = query({
   },
 });
 
+// Get current user ID
+export const getCurrentUserId = query({
+  args: {},
+  handler: async (ctx) => {
+    return await getAuthUserId(ctx);
+  },
+});
+
 // You can write data to the database via a mutation:
 export const addNumber = mutation({
   // Validators for arguments.

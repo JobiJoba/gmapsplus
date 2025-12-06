@@ -84,16 +84,20 @@ export const getListById = query({
       return null;
     }
 
-    // Check if user has access (owner or shared)
+    // Check if user has access (owner, public list, or shared)
     if (list.userId !== userId) {
-      const shared = await ctx.db
-        .query("sharedLists")
-        .withIndex("by_listId", (q) => q.eq("listId", args.listId))
-        .filter((q) => q.eq(q.field("userId"), userId))
-        .first();
+      // Allow access if list is public
+      if (!list.isPublic) {
+        // Check if user has been shared with
+        const shared = await ctx.db
+          .query("sharedLists")
+          .withIndex("by_listId", (q) => q.eq("listId", args.listId))
+          .filter((q) => q.eq(q.field("userId"), userId))
+          .first();
 
-      if (!shared) {
-        throw new Error("List not found or access denied");
+        if (!shared) {
+          throw new Error("List not found or access denied");
+        }
       }
     }
 
@@ -300,42 +304,38 @@ export const generateShareToken = mutation({
 });
 
 /**
- * Get lists shared with the current user
+ * Get all public lists from everyone
  */
 export const getSharedLists = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      return [];
-    }
-
-    const sharedLists = await ctx.db
-      .query("sharedLists")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
+    // Get all public lists
+    const allLists = await ctx.db
+      .query("lists")
+      .filter((q) => q.eq(q.field("isPublic"), true))
       .collect();
 
-    const lists = await Promise.all(
-      sharedLists.map(async (shared) => {
-        const list = await ctx.db.get(shared.listId);
-        if (!list) {
-          return null;
-        }
-
+    // Get place counts and user info for each list
+    const listsWithCounts = await Promise.all(
+      allLists.map(async (list) => {
         const listPlaces = await ctx.db
           .query("listPlaces")
           .withIndex("by_listId", (q) => q.eq("listId", list._id))
           .collect();
 
+        // Get user info
+        const user = await ctx.db.get(list.userId);
+        const ownerName = (user as any)?.name || (user as any)?.email || "Unknown";
+
         return {
           ...list,
           placeCount: listPlaces.length,
-          sharedAt: shared.sharedAt,
+          ownerName,
         };
       })
     );
 
-    return lists.filter((l) => l !== null);
+    return listsWithCounts;
   },
 });
 
