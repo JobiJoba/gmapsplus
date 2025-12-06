@@ -37,17 +37,27 @@ export default function App() {
         <Route
           path="/"
           element={
-            <Unauthenticated>
-              <Landing />
-            </Unauthenticated>
+            <>
+              <Unauthenticated>
+                <Landing />
+              </Unauthenticated>
+              <Authenticated>
+                <Navigate to="/app" replace />
+              </Authenticated>
+            </>
           }
         />
         <Route
           path="/auth"
           element={
-            <Unauthenticated>
-              <Auth />
-            </Unauthenticated>
+            <>
+              <Unauthenticated>
+                <Auth />
+              </Unauthenticated>
+              <Authenticated>
+                <Navigate to="/app" replace />
+              </Authenticated>
+            </>
           }
         />
         <Route

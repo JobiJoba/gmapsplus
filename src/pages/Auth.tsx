@@ -45,7 +45,11 @@ export default function Auth() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
+              <label htmlFor="email" className="sr-only">
+                Email
+              </label>
               <Input
+                id="email"
                 type="email"
                 name="email"
                 placeholder="Email"
@@ -54,7 +58,11 @@ export default function Auth() {
               />
             </div>
             <div>
+              <label htmlFor="password" className="sr-only">
+                Password
+              </label>
               <Input
+                id="password"
                 type="password"
                 name="password"
                 placeholder="Password"

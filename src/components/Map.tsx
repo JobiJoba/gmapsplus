@@ -2,14 +2,16 @@ import { useState, useEffect } from "react";
 import { APIProvider, Map, Marker, useMap } from "@vis.gl/react-google-maps";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { PlaceDetailsDialog } from "./PlaceDetailsDialog";
+import { PlaceDetailsPanel } from "./PlaceDetailsPanel";
 import { PlaceSearch } from "./PlaceSearch";
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
-function MapContent() {
-  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+interface MapContentProps {
+  onPlaceSelect: (placeId: string) => void;
+}
+
+function MapContent({ onPlaceSelect }: MapContentProps) {
   const userPlaces = useQuery(api.places.getUserPlaces);
   const map = useMap();
 
@@ -55,27 +57,26 @@ function MapContent() {
                 lng: location.longitude,
               }}
               onClick={() => {
-                setSelectedPlaceId(place.googlePlaceId);
-                setDialogOpen(true);
+                onPlaceSelect(place.googlePlaceId);
               }}
               title={place.data?.displayName?.text || "Place"}
             />
           );
         })}
       </div>
-      <PlaceDetailsDialog
-        placeId={selectedPlaceId}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onPlaceSaved={() => {
-          // Refetch places
-        }}
-      />
     </>
   );
 }
 
 export default function MapComponent() {
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+
+  const handlePlaceSelect = (placeId: string) => {
+    setSelectedPlaceId(placeId);
+    setPanelOpen(true);
+  };
+
   if (!API_KEY) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-100">
@@ -92,7 +93,7 @@ export default function MapComponent() {
   return (
     <APIProvider apiKey={API_KEY} libraries={["places"]}>
       <div className="w-full h-full relative">
-        <PlaceSearch />
+        <PlaceSearch onPlaceSelect={handlePlaceSelect} />
         <Map
           defaultCenter={{ lat: 18.7883, lng: 98.9853 }} // Chiang Mai default
           defaultZoom={13}
@@ -100,8 +101,19 @@ export default function MapComponent() {
           fullscreenControl={false}
           streetViewControl={false}
         >
-          <MapContent />
+          <MapContent onPlaceSelect={handlePlaceSelect} />
         </Map>
+        <PlaceDetailsPanel
+          placeId={selectedPlaceId}
+          open={panelOpen}
+          onClose={() => {
+            setPanelOpen(false);
+            setSelectedPlaceId(null);
+          }}
+          onPlaceSaved={() => {
+            // Refetch places
+          }}
+        />
       </div>
     </APIProvider>
   );
