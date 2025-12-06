@@ -15,24 +15,24 @@ function MapContent({ onPlaceSelect }: MapContentProps) {
   const userPlaces = useQuery(api.places.getUserPlaces);
   const map = useMap();
 
-  useEffect(() => {
-    if (map && userPlaces && userPlaces.length > 0) {
-      // Fit bounds to show all markers
-      const bounds = new google.maps.LatLngBounds();
-      userPlaces.forEach((place) => {
-        const location = place.data?.location;
-        if (location?.latitude && location?.longitude) {
-          bounds.extend({
-            lat: location.latitude,
-            lng: location.longitude,
-          });
-        }
-      });
-      if (!bounds.isEmpty()) {
-        map.fitBounds(bounds);
-      }
-    }
-  }, [map, userPlaces]);
+  // useEffect(() => {
+  //   if (map && userPlaces && userPlaces.length > 0) {
+  //     // Fit bounds to show all markers
+  //     const bounds = new google.maps.LatLngBounds();
+  //     userPlaces.forEach((place) => {
+  //       const location = place.data?.location;
+  //       if (location?.latitude && location?.longitude) {
+  //         bounds.extend({
+  //           lat: location.latitude,
+  //           lng: location.longitude,
+  //         });
+  //       }
+  //     });
+  //     if (!bounds.isEmpty()) {
+  //       map.fitBounds(bounds);
+  //     }
+  //   }
+  // }, [map, userPlaces]);
 
   // Handle clicks on default Google Maps markers
   useEffect(() => {
@@ -46,8 +46,8 @@ function MapContent({ onPlaceSelect }: MapContentProps) {
       const placesService = new google.maps.places.PlacesService(map);
       const request = {
         location: event.latLng,
-        radius: 50, // Search within 50 meters
-        type: "establishment",
+        radius: 100, // Increased radius to 100 meters for better detection
+        type: "establishment", // Search for establishments
       };
 
       placesService.nearbySearch(request, (results, status) => {
@@ -56,10 +56,45 @@ function MapContent({ onPlaceSelect }: MapContentProps) {
           results &&
           results.length > 0
         ) {
-          // Get the closest place
-          const place = results[0];
-          if (place.place_id) {
-            onPlaceSelect(place.place_id);
+          // Filter out routes and other non-place types
+          const validPlaces = results.filter((place) => {
+            const types = place.types || [];
+            // Exclude route types
+            return !types.some(
+              (type) =>
+                type === "route" ||
+                type === "street_address" ||
+                type === "premise" ||
+                type === "subpremise",
+            );
+          });
+
+          if (validPlaces.length > 0) {
+            // Calculate distance and get the closest valid place
+            const clickedLat = event.latLng!.lat();
+            const clickedLng = event.latLng!.lng();
+
+            const closestPlace = validPlaces.reduce((closest, current) => {
+              const currentLocation = current.geometry?.location;
+              const closestLocation = closest.geometry?.location;
+
+              if (!currentLocation || !closestLocation) return closest;
+
+              const currentDist = Math.sqrt(
+                Math.pow(currentLocation.lat() - clickedLat, 2) +
+                  Math.pow(currentLocation.lng() - clickedLng, 2),
+              );
+              const closestDist = Math.sqrt(
+                Math.pow(closestLocation.lat() - clickedLat, 2) +
+                  Math.pow(closestLocation.lng() - clickedLng, 2),
+              );
+
+              return currentDist < closestDist ? current : closest;
+            });
+
+            if (closestPlace.place_id) {
+              onPlaceSelect(closestPlace.place_id);
+            }
           }
         }
       });
@@ -111,6 +146,33 @@ function MapContent({ onPlaceSelect }: MapContentProps) {
 export default function MapComponent() {
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const defaultLocation = { lat: 18.7883, lng: 98.9853 }; // Chiang Mai fallback
+  const [userLocation, setUserLocation] = useState<{
+    lat: number;
+    lng: number;
+  }>(defaultLocation);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+          setIsLoadingLocation(false);
+        },
+        () => {
+          // Fallback to default location if geolocation fails
+          setIsLoadingLocation(false);
+        },
+      );
+    } else {
+      // Fallback if geolocation is not supported - defer state update
+      setTimeout(() => setIsLoadingLocation(false), 0);
+    }
+  }, []);
 
   const handlePlaceSelect = (placeId: string) => {
     setSelectedPlaceId(placeId);
@@ -132,12 +194,21 @@ export default function MapComponent() {
     );
   }
 
+  // Show loading state while getting user location
+  if (isLoadingLocation) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+        <p>Getting your location...</p>
+      </div>
+    );
+  }
+
   return (
     <APIProvider apiKey={API_KEY} libraries={["places"]}>
       <div className="w-full h-full relative">
         <PlaceSearch onPlaceSelect={handlePlaceSelect} />
         <Map
-          defaultCenter={{ lat: 18.7883, lng: 98.9853 }} // Chiang Mai default
+          defaultCenter={userLocation}
           defaultZoom={13}
           mapId="gmapsplus-map"
           fullscreenControl={false}

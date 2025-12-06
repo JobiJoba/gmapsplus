@@ -18,7 +18,8 @@ export default function Nav() {
   const user = useQuery(api.myFunctions.listNumbers, { count: 0 });
 
   const navItems = [
-    { path: "/app", label: "Your places", icon: MapPin },
+    { path: "/app", label: "Add a place", icon: MapPin },
+    { path: "/app/places", label: "Your places", icon: MapPin },
     { path: "/app/lists", label: "Your lists", icon: List },
     { path: "/app/wheel", label: "Wheel of places", icon: Shuffle },
     { path: "/app/shared", label: "Shared lists", icon: Share2 },
