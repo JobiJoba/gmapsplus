@@ -9,86 +9,92 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Star, X, Trash2, Accessibility } from "lucide-react";
 import { PlaceDetailsDialog } from "@/components/PlaceDetailsDialog";
 
+type FacetSelections = Record<string, (string | number)[]>;
+
 export default function Places() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPriceRange, setSelectedPriceRange] = useState<number[]>([]);
-  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+  const [selectedFacets, setSelectedFacets] = useState<FacetSelections>({});
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const places = useQuery(api.places.getUserPlaces);
+  const facets = useQuery(api.places.getFacets);
+  const places = useQuery(api.places.searchPlaces, {
+    searchQuery: searchQuery || undefined,
+    facets: Object.keys(selectedFacets).length > 0 ? selectedFacets : undefined,
+  });
   const removePlace = useMutation(api.places.removePlace);
 
-  // Filter places based on search and filters
-  const filteredPlaces = useMemo(() => {
-    if (!places) return [];
-
-    let filtered = [...places];
-
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((place) => {
-        const name = place.data?.displayName?.text?.toLowerCase() || "";
-        const address = place.data?.formattedAddress?.toLowerCase() || "";
-        return name.includes(query) || address.includes(query);
-      });
+  const formatFacetLabel = (key: string, value: string | number): string => {
+    switch (key) {
+      case "priceLevel":
+        return "$".repeat(value as number);
+      case "rating":
+        return `${value}+ stars`;
+      case "types":
+        return String(value).replace(/_/g, " ");
+      case "businessStatus":
+        return String(value).replace(/_/g, " ");
+      case "accessibilityOptions":
+        return String(value).replace(/_/g, " ");
+      case "openingDays":
+        return String(value);
+      case "paymentOptions":
+        return String(value).replace(/_/g, " ");
+      case "parkingOptions":
+        return String(value).replace(/_/g, " ");
+      default:
+        return String(value).replace(/_/g, " ");
     }
-
-    // Filter by price range
-    if (selectedPriceRange.length > 0) {
-      filtered = filtered.filter((place) => {
-        const priceLevel = place.data?.priceLevel;
-        return priceLevel && selectedPriceRange.includes(priceLevel);
-      });
-    }
-
-    // Filter by amenities
-    if (selectedAmenities.length > 0) {
-      filtered = filtered.filter((place) => {
-        const types = place.data?.types || [];
-        const hasToilet = types.some(
-          (t: string) =>
-            t.includes("restroom") ||
-            t.includes("toilet") ||
-            t.includes("bathroom"),
-        );
-        const hasParking = types.some(
-          (t: string) => t.includes("parking") || place.data?.hasParking,
-        );
-
-        if (selectedAmenities.includes("Toilet") && !hasToilet) return false;
-        if (selectedAmenities.includes("Parking") && !hasParking) return false;
-        return true;
-      });
-    }
-
-    return filtered;
-  }, [places, searchQuery, selectedPriceRange, selectedAmenities]);
-
-  const togglePriceRange = (level: number) => {
-    setSelectedPriceRange((prev) =>
-      prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level],
-    );
   };
 
-  const toggleAmenity = (amenity: string) => {
-    setSelectedAmenities((prev) =>
-      prev.includes(amenity)
-        ? prev.filter((a) => a !== amenity)
-        : [...prev, amenity],
-    );
+  const formatFacetTitle = (key: string): string => {
+    const titles: Record<string, string> = {
+      types: "Types",
+      priceLevel: "Price Level",
+      rating: "Rating",
+      businessStatus: "Business Status",
+      accessibilityOptions: "Accessibility",
+      openingDays: "Opening Days",
+      secondaryHours: "Special Hours",
+      paymentOptions: "Payment Options",
+      fuelOptions: "Fuel Options",
+      evChargeOptions: "EV Charging",
+      parkingOptions: "Parking",
+      subDestinations: "Sub Destinations",
+      hasEditorialSummary: "Has Description",
+    };
+    return titles[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
+  };
+
+  const toggleFacet = (facetKey: string, value: string | number) => {
+    setSelectedFacets((prev) => {
+      const current = prev[facetKey] || [];
+      const newValue = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+      
+      if (newValue.length === 0) {
+        const { [facetKey]: _, ...rest } = prev;
+        return rest;
+      }
+      
+      return { ...prev, [facetKey]: newValue };
+    });
   };
 
   const clearFilters = () => {
-    setSelectedPriceRange([]);
-    setSelectedAmenities([]);
+    setSelectedFacets({});
   };
 
-  const activeFilters = [
-    ...selectedPriceRange.map((level) => "$".repeat(level)),
-    ...selectedAmenities,
-  ];
+  const activeFilters = useMemo(() => {
+    const filters: Array<{ key: string; label: string }> = [];
+    for (const [key, values] of Object.entries(selectedFacets)) {
+      for (const value of values) {
+        filters.push({ key, label: formatFacetLabel(key, value) });
+      }
+    }
+    return filters;
+  }, [selectedFacets]);
 
   const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
@@ -123,59 +129,51 @@ export default function Places() {
 
       <div className="container mx-auto px-4 py-6 flex gap-6">
         {/* Left Sidebar - Filters */}
-        <aside className="w-64 bg-card rounded-lg p-5 h-fit sticky top-24 border border-border">
+        <aside className="w-64 bg-card rounded-lg p-5 h-fit sticky top-24 border border-border max-h-[calc(100vh-8rem)] overflow-y-auto">
           <div className="space-y-6">
-            {/* Price Range */}
-            <div>
-              <h3 className="font-semibold mb-3 text-foreground">
-                Price range
-              </h3>
-              <div className="space-y-2.5">
-                {[1, 2, 3].map((level) => (
-                  <div
-                    key={level}
-                    className="flex items-center space-x-2.5 group"
-                  >
-                    <Checkbox
-                      id={`price-${level}`}
-                      checked={selectedPriceRange.includes(level)}
-                      onCheckedChange={() => togglePriceRange(level)}
-                    />
-                    <label
-                      htmlFor={`price-${level}`}
-                      className="text-sm font-medium cursor-pointer text-foreground group-hover:text-primary transition-colors"
-                    >
-                      {"$".repeat(level)}
-                    </label>
+            {facets && Object.keys(facets).length > 0 ? (
+              Object.entries(facets).map(([facetKey, values]) => {
+                if (!values || values.length === 0) return null;
+                
+                return (
+                  <div key={facetKey}>
+                    <h3 className="font-semibold mb-3 text-foreground">
+                      {formatFacetTitle(facetKey)}
+                    </h3>
+                    <div className="space-y-2.5 max-h-64 overflow-y-auto">
+                      {values.map((value) => {
+                        const isSelected = selectedFacets[facetKey]?.includes(value) || false;
+                        const id = `${facetKey}-${value}`;
+                        
+                        return (
+                          <div
+                            key={id}
+                            className="flex items-center space-x-2.5 group"
+                          >
+                            <Checkbox
+                              id={id}
+                              checked={isSelected}
+                              onCheckedChange={() => toggleFacet(facetKey, value)}
+                            />
+                            <label
+                              htmlFor={id}
+                              className="text-sm font-medium cursor-pointer text-foreground group-hover:text-primary transition-colors flex-1 truncate"
+                              title={formatFacetLabel(facetKey, value)}
+                            >
+                              {formatFacetLabel(facetKey, value)}
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                ))}
+                );
+              })
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                No filters available
               </div>
-            </div>
-
-            {/* Amenities */}
-            <div>
-              <h3 className="font-semibold mb-3 text-foreground">Amenities</h3>
-              <div className="space-y-2.5">
-                {["Toilet", "Parking"].map((amenity) => (
-                  <div
-                    key={amenity}
-                    className="flex items-center space-x-2.5 group"
-                  >
-                    <Checkbox
-                      id={`amenity-${amenity}`}
-                      checked={selectedAmenities.includes(amenity)}
-                      onCheckedChange={() => toggleAmenity(amenity)}
-                    />
-                    <label
-                      htmlFor={`amenity-${amenity}`}
-                      className="text-sm font-medium cursor-pointer text-foreground group-hover:text-primary transition-colors"
-                    >
-                      {amenity}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
         </aside>
 
@@ -184,14 +182,14 @@ export default function Places() {
           {/* Selected Filters Bar */}
           {activeFilters.length > 0 && (
             <div className="bg-secondary border border-border rounded-lg px-4 py-3 mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground">
+              <div className="flex items-center gap-2 flex-1">
+                <span className="text-sm font-medium text-foreground shrink-0">
                   Selected filters:
                 </span>
                 <div className="flex gap-2 flex-wrap">
                   {activeFilters.map((filter, idx) => (
                     <Badge key={idx} variant="secondary" className="text-sm">
-                      {filter}
+                      {filter.label}
                     </Badge>
                   ))}
                 </div>
@@ -200,7 +198,7 @@ export default function Places() {
                 variant="ghost"
                 size="sm"
                 onClick={clearFilters}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 shrink-0"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -208,21 +206,21 @@ export default function Places() {
           )}
 
           {/* Place Cards */}
-          {!places ? (
+          {places === undefined ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">Loading places...</p>
             </div>
-          ) : filteredPlaces.length === 0 ? (
+          ) : places.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">
-                {places.length === 0
-                  ? "No places saved yet"
-                  : "No places match your filters"}
+                {searchQuery || Object.keys(selectedFacets).length > 0
+                  ? "No places match your filters"
+                  : "No places saved yet"}
               </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredPlaces.map((place) => {
+              {places.map((place) => {
                 const imageUrl = getPlaceImage(place);
                 const rating = place.data?.rating;
                 const reviewCount = place.data?.userRatingCount;

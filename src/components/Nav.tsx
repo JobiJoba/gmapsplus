@@ -132,7 +132,10 @@ export default function Nav() {
           <div className="flex items-center gap-2 md:gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="hidden md:flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
+                <button
+                  type="button"
+                  className="hidden md:flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+                >
                   <Avatar>
                     <AvatarFallback>
                       {user?.viewer ? user.viewer.charAt(0).toUpperCase() : "U"}
