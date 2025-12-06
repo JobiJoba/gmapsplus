@@ -3,10 +3,10 @@
  */
 export const FILTER_LABELS: Record<string, Record<string | number, string>> = {
   accessibilityOptions: {
-    wheelchairAccessibleEntrance: "Wheelchair Accessible Entrance",
-    wheelchairAccessibleRestroom: "Wheelchair Accessible Restroom",
-    wheelchairAccessibleParking: "Wheelchair Accessible Parking",
-    wheelchairAccessibleSeating: "Wheelchair Accessible Seating",
+    wheelchairAccessibleEntrance: "Accessible Entrance",
+    wheelchairAccessibleRestroom: "Accessible Restroom",
+    wheelchairAccessibleParking: "Accessible Parking",
+    wheelchairAccessibleSeating: "Accessible Seating",
   },
   paymentOptions: {
     cash: "Cash",
